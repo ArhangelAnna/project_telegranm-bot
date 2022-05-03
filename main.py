@@ -6,12 +6,11 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, MessageHandler, Filters, ConversationHandler
 from telegram.ext import CallbackContext, CommandHandler
 
-TOKEN = "5357056348:AAHKBN4Va0NVAmGAxkeShO3oQZDpIVBeenI"
-'''logging.basicConfig(
+logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
 
-logger = logging.getLogger(__name__)'''
+logger = logging.getLogger(__name__)
 # Добавление всех клавиатур
 reply_keyboard = [['/add', '/complete'],
                   ['/site', '/work_time']]
@@ -104,10 +103,10 @@ def new_category_2(update, context):
 
 
 def old_category(update, context):
-    category = cur.execute(f'''SELECT category FROM categorys''').fetchall()
+    category = cur.execute(f'''SELECT id,category  category FROM categorys''').fetchall()
     categorys = ""
     for el in category:
-        categorys = categorys + el[0] + ","
+        categorys = categorys + str(el[0]) + ": " + el[1] + "\n"
     update.message.reply_text(f"Вот все существующие категории\n"
                               f"{categorys}\n"
                               f"Напишите ту категорию в каторую хотите добавить", reply_markup=ReplyKeyboardRemove())
@@ -152,61 +151,92 @@ def stop_add(update, context):
     return ConversationHandler.END
 
 
-# Начало удаления(предупреждение, удаление старой клавиатуры)
-def delete(update, context):
+# Начало помечания(предупреждение, удаление старой клавиатуры)
+def complete(update, context):
     update.message.reply_text(
         f"!ВЫ ТОЧНО ХОТИТЕ ПОМЕТЬ ЗАПИСЬ КАК ВЫПОЛНЕНУЮ! "
         f"Если  вы не хотите помечать пошлите команду /stop_delete.\n"
-        f"А если хотите продолжить напишите любое другое", reply_markup=ReplyKeyboardRemove())
+        f"А если хотите продолжить нажмите далее", reply_markup=markup3)
     return 1
 
 
-# 2 стания удаления , 1\2 стадия выбора метода поиска(добавления новой клавиатуры)
+# 2 стания помечания , 1\2 стадия выбора метода поиска(добавления новой клавиатуры)
 def choosing_method(update, context):
     update.message.reply_text(
         f"Для начала выберете способ поиска нужной записи в клавиатуре", reply_markup=markup1)
     return 2
 
 
-# 2 стания удаления , 2\2 стадия выбора метода поиска(выбор метода, разветвление диалога)
+# 2 стания помечания , 2\2 стадия выбора метода поиска(выбор метода, разветвление диалога)
 def choosing_method_2(update, context):
     method = update.message.text
     update.message.reply_text(
-        f"Вы выбрали - {method}")
+        f"Вы выбрали - {method}", reply_markup=markup3)
     if method == "По названию":
         return 3
     else:
         return 4
 
 
-# 3 стадия  удаления или ... поиска, 1\2 поиск по названию(пользователь вводит название)
+# 3 стадия  помечания или ... поиска, 1\2 поиск по названию(пользователь вводит название)
 def by_name(update, context):
     update.message.reply_text(
-        f"Напишите название записи")
+        f"Напишите  короткое название записи", reply_markup=ReplyKeyboardRemove())
     return 5
 
 
-# 3 стадия удаления или ... поиска , 2\2 поиск по названию(пользователь выбирает точное название)
+# 3 стадия помечания или ... поиска , 2\2 поиск по названию(пользователь выбирает точное название)
 def by_name_2(update, context):
     name = update.message.text
+    name = cur.execute(f'''SELECT id, name, record FROM records WHERE "{name} IN name" ''').fetchall()
+    names = ""
+    for el in name:
+        names = names + str(el[0]) + "- " + el[1] + ": " + el[2] + "\n"
     update.message.reply_text(
-        f"Вот все записи с таким названием"
-        f"{name}"
-        f"Отправте точное назавание записи")
+        f"Вот все записи с таким  коротким названием"
+        f"{names}"
+        f"Напишите номер , той записи которую хотите пометить как выполненую")
+    return 7
+
+
+# 3 стадия  помечания или ... поиска, 1\2 поиск по категории(пользователь вводит название)
+def by_category(update, context):
+    category = cur.execute(f'''SELECT id, category FROM categorys''').fetchall()
+    categorys = ""
+    for el in category:
+        categorys = categorys + str(el[0]) + ": " + el[1] + "\n"
+    update.message.reply_text(f"Вот все существующие категории\n"
+                              f"{categorys}"
+                              f"Напишите ту категорию , в каторой хотите пометить запись",
+                              reply_markup=ReplyKeyboardRemove())
     return 6
 
 
-# 3 стадия  удаления или ... поиска, 1\2 поиск по категории(пользователь вводит название)
-def by_category():
-    pass
+# 3 стадия  помечания или ... поиска, 2\2 поиск по категории(пользователь вводит название)
+def by_category_2(update, context):
+    category = update.message.text
+    record = cur.execute(f'''SELECT id , name, record  FROM records WHERE category ="{category}"''').fetchall()
+    records = ""
+    for el in record:
+        records = records + str(el[0]) + "- " + el[1] + ": " + el[2] + "\n"
+    update.message.reply_text(f"Вот все записи в этой категории"
+                              f"{records}"
+                              f"Напишите номер записи , которую хотите пометить как выполненую")
+    return 7
 
 
-def by_category_2():
-    pass
+def end_complete(update, context):
+    id = update.message.text
+    cur.execute(f'''UPDATE records SET complete = True WHERE id = {id} ''')
+    record = cur.execute(f'''SELECT name, record  FROM records WHERE id = {id}''').fetchall()
+    update.message.reply_text(f"Вы пометили эту запись:\n"
+                              f"{record[0][0]} : {record[0][1]}\n"
+                              f" Как сделаную")
+    return ConversationHandler.END
 
 
-def stop_delete(update, context):
-    update.message.reply_text('Вы прикратили удаление', reply_markup=markup)
+def stop_complete(update, context):
+    update.message.reply_text('Вы прикратили помечание', reply_markup=markup)
     return ConversationHandler.END
 
 
@@ -214,6 +244,7 @@ def main():
     updater = Updater(TOKEN)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
+    # Диалог добавления записи
     add_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('add', add)],
         states={
@@ -232,8 +263,9 @@ def main():
     )
 
     dp.add_handler(add_conv_handler)
+    # Диалог помечания как выполненого
     delete_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('complete', delete)],
+        entry_points=[CommandHandler('complete', complete)],
         states={
             # Добавили user_data для сохранения ответа.
             1: [MessageHandler(Filters.text & ~Filters.command, choosing_method, pass_user_data=True)],
@@ -241,9 +273,10 @@ def main():
             3: [MessageHandler(Filters.text & ~Filters.command, by_name, pass_user_data=True)],
             4: [MessageHandler(Filters.text & ~Filters.command, by_category, pass_user_data=True)],
             5: [MessageHandler(Filters.text & ~Filters.command, by_name_2, pass_user_data=True)],
-            6: [MessageHandler(Filters.text & ~Filters.command, by_category_2, pass_user_data=True)]
+            6: [MessageHandler(Filters.text & ~Filters.command, by_category_2, pass_user_data=True)],
+            7: [MessageHandler(Filters.text & ~Filters.command, end_complete, pass_user_data=True)]
         },
-        fallbacks=[CommandHandler('stop_delete', stop_delete)]
+        fallbacks=[CommandHandler('stop_complete', stop_complete)]
     )
 
     dp.add_handler(delete_conv_handler)
