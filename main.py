@@ -6,11 +6,12 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, MessageHandler, Filters, ConversationHandler
 from telegram.ext import CallbackContext, CommandHandler
 
-logging.basicConfig(
+TOKEN = "5357056348:AAHKBN4Va0NVAmGAxkeShO3oQZDpIVBeenI"
+'''logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)'''
 # Добавление всех клавиатур
 reply_keyboard = [['/add', '/complete'],
                   ['/site', '/work_time']]
@@ -103,16 +104,22 @@ def new_category_2(update, context):
 
 
 def old_category(update, context):
-    try:
-        category = cur.execute(f'''SELECT id FROM categorys''').fetchall()
-        categorys = ""
-        for el in category:
-            categorys = categorys + el[0] + ","
-        update.message.reply_text(f"Вот все существующие категории\n"
-                                  f"{categorys}", reply_markup=ReplyKeyboardRemove())
-        return 5
-    except:
-        pass
+    category = cur.execute(f'''SELECT category FROM categorys''').fetchall()
+    categorys = ""
+    for el in category:
+        categorys = categorys + el[0] + ","
+    update.message.reply_text(f"Вот все существующие категории\n"
+                              f"{categorys}\n"
+                              f"Напишите ту категорию в каторую хотите добавить", reply_markup=ReplyKeyboardRemove())
+    return 8
+
+
+def old_category_2(update, context):
+    category = update.message.text
+    context.user_data['category'] = category
+    update.message.reply_text(
+        f"Вы выбрали категорию  - {category}", reply_markup=markup3)
+    return 6
 
 
 def short_name(update, context):
@@ -215,10 +222,11 @@ def main():
             # ...и для его использования.
             2: [MessageHandler(Filters.text & ~Filters.command, selecting_category_2, pass_user_data=True)],
             3: [MessageHandler(Filters.text & ~Filters.command, new_category, pass_user_data=True)],
-            4: [MessageHandler(Filters.text & ~Filters.command, end_add, pass_user_data=True)],
-            5: [MessageHandler(Filters.text & ~Filters.command, new_category_2, pass_user_data=True)],
+            4: [MessageHandler(Filters.text & ~Filters.command, old_category, pass_user_data=True)],
+            5: [MessageHandler(Filters.text & ~Filters.command, new_category, pass_user_data=True)],
             6: [MessageHandler(Filters.text & ~Filters.command, short_name, pass_user_data=True)],
             7: [MessageHandler(Filters.text & ~Filters.command, end_add, pass_user_data=True)],
+            8: [MessageHandler(Filters.text & ~Filters.command, old_category_2, pass_user_data=True)]
         },
         fallbacks=[CommandHandler('stop_add', stop_add)]
     )
