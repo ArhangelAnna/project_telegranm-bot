@@ -1,16 +1,10 @@
-import logging
 import sqlite3
-from typing import List, Any
-
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, MessageHandler, Filters, ConversationHandler
-from telegram.ext import CallbackContext, CommandHandler
+from telegram.ext import CommandHandler
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
-)
 
-logger = logging.getLogger(__name__)
+
 # Добавление всех клавиатур
 reply_keyboard = [['/add', '/complete', '/view']]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
@@ -126,7 +120,7 @@ def old_category_2(update, context):
     return 6
 
 
-#4 этап добавления 
+# 4 этап добавления
 def short_name(update, context):
     update.message.reply_text(
         f"Напишите кароткое название записи", reply_markup=ReplyKeyboardRemove())
@@ -213,7 +207,7 @@ def by_category(update, context):
     return 5
 
 
-# 3 стадия  помечания или ... поиска, 2\2 поиск по категории(пользователь вводит название)
+# 3 стадия  помечания , 2\2 поиск по категории(пользователь вводит название).
 def by_category_2(update, context):
     category = update.message.text
     user_id = update.message.from_user['id']
@@ -228,7 +222,7 @@ def by_category_2(update, context):
     return 7
 
 
-#
+# 3 стадия помечания , показ всего.
 def by_all(update, context):
     user_id = update.message.from_user['id']
     _all = cur.execute(
@@ -243,7 +237,7 @@ def by_all(update, context):
     return 7
 
 
-#
+# Конец помечания сделанных задач
 def end_complete(update, context):
     id = update.message.text
     cur.execute(f'''UPDATE records SET complete = 0 WHERE id = {id} ''').fetchall()
@@ -254,13 +248,13 @@ def end_complete(update, context):
     return ConversationHandler.END
 
 
-#
+# Прерывание помечания сделаных задач
 def stop_complete(update, context):
     update.message.reply_text('Вы прикратили помечание', reply_markup=markup)
     return ConversationHandler.END
 
 
-#
+# Начало просмотра
 def view(update, context):
     update.message.reply_text(
         "Вы можете прервать поиск, послав команду /stop_view.\n"
@@ -271,6 +265,7 @@ def view(update, context):
     return 1
 
 
+# 2 стадия просмотра , выбор метода по которому отбираться задачи
 def choosing_method_v(update, context):
     method = update.message.text
     update.message.reply_text(
@@ -281,6 +276,7 @@ def choosing_method_v(update, context):
         return 3
 
 
+# 3 стадия просмотра , выборка по категории
 def by_category_v(update, context):
     category = cur.execute(f'''SELECT id, category FROM categorys''').fetchall()
     categorys = ""
@@ -293,6 +289,7 @@ def by_category_v(update, context):
     return 4
 
 
+# Конец просмотра, выборка по категории
 def end_view_category(update, context):
     try:
         category = update.message.text
@@ -315,6 +312,7 @@ def end_view_category(update, context):
         update.message.reply_text(f"Такой категории нет")
 
 
+# Конец просмотра, просмотр всех 
 def end_view_all(update, context):
     try:
         user_id = update.message.from_user['id']
@@ -331,6 +329,7 @@ def end_view_all(update, context):
         pass
 
 
+# Прерывание  просмотра
 def stop_view(update, context):
     update.message.reply_text('Вы прикратили поиск', reply_markup=markup)
     return ConversationHandler.END
