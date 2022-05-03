@@ -12,8 +12,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 # Добавление всех клавиатур
-reply_keyboard = [['/add', '/complete'],
-                  ['/site', '/work_time']]
+reply_keyboard = [['/add', '/complete', '/view']]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
 reply_keyboard1 = [['По названию', 'По категории']]
 markup1 = ReplyKeyboardMarkup(reply_keyboard1, one_time_keyboard=False)
@@ -21,6 +20,8 @@ reply_keyboard2 = [['Существующюю', 'Новую']]
 markup2 = ReplyKeyboardMarkup(reply_keyboard2, one_time_keyboard=False)
 reply_keyboard3 = [["Далее"]]
 markup3 = ReplyKeyboardMarkup(reply_keyboard3, one_time_keyboard=False)
+reply_keyboard4 = [['По названию', 'По категории', "Всё"]]
+markup4 = ReplyKeyboardMarkup(reply_keyboard4, one_time_keyboard=False)
 # Подключение к БД
 con = sqlite3.connect("record_db.sqlite", check_same_thread=False)
 # Создание курсора
@@ -69,6 +70,7 @@ def selecting_category(update, context):
         pass
 
 
+#
 def selecting_category_2(update, context):
     method = update.message.text
     update.message.reply_text(
@@ -79,6 +81,7 @@ def selecting_category_2(update, context):
         return 4
 
 
+#
 def new_category(update, context):
     try:
         update.message.reply_text(f"Напишите название новой категории", reply_markup=ReplyKeyboardRemove())
@@ -87,6 +90,7 @@ def new_category(update, context):
         pass
 
 
+#
 def new_category_2(update, context):
     try:
         category = update.message.text
@@ -102,8 +106,9 @@ def new_category_2(update, context):
         pass
 
 
+#
 def old_category(update, context):
-    category = cur.execute(f'''SELECT id,category  category FROM categorys''').fetchall()
+    category = cur.execute(f'''SELECT id,category FROM categorys ''').fetchall()
     categorys = ""
     for el in category:
         categorys = categorys + str(el[0]) + ": " + el[1] + "\n"
@@ -113,6 +118,7 @@ def old_category(update, context):
     return 8
 
 
+#
 def old_category_2(update, context):
     category = update.message.text
     context.user_data['category'] = category
@@ -121,6 +127,7 @@ def old_category_2(update, context):
     return 6
 
 
+#
 def short_name(update, context):
     update.message.reply_text(
         f"Напишите кароткое название записи", reply_markup=ReplyKeyboardRemove())
@@ -188,7 +195,9 @@ def by_name(update, context):
 # 3 стадия помечания или ... поиска , 2\2 поиск по названию(пользователь выбирает точное название)
 def by_name_2(update, context):
     name = update.message.text
-    name = cur.execute(f'''SELECT id, name, record FROM records WHERE "{name} IN name" ''').fetchall()
+    user_id = update.message.from_user['id']
+    name = cur.execute(f'''SELECT id, name, record FROM records WHERE "{name}" IN name 
+                          AND user_id = {user_id}''').fetchall()
     names = ""
     for el in name:
         names = names + str(el[0]) + "- " + el[1] + ": " + el[2] + "\n"
@@ -215,28 +224,137 @@ def by_category(update, context):
 # 3 стадия  помечания или ... поиска, 2\2 поиск по категории(пользователь вводит название)
 def by_category_2(update, context):
     category = update.message.text
-    record = cur.execute(f'''SELECT id , name, record  FROM records WHERE category ="{category}"''').fetchall()
+    user_id = update.message.from_user['id']
+    record = cur.execute(f'''SELECT id , name, record  FROM records WHERE category = "{category}"
+                           AND user_id = {user_id} AND complete = 1''').fetchall()
     records = ""
     for el in record:
         records = records + str(el[0]) + "- " + el[1] + ": " + el[2] + "\n"
-    update.message.reply_text(f"Вот все записи в этой категории"
+    update.message.reply_text(f"Вот все записи в этой категории\n"
                               f"{records}"
                               f"Напишите номер записи , которую хотите пометить как выполненую")
     return 7
 
 
+#
 def end_complete(update, context):
     id = update.message.text
-    cur.execute(f'''UPDATE records SET complete = True WHERE id = {id} ''')
+    cur.execute(f'''UPDATE records SET complete = 0 WHERE id = {id} ''')
     record = cur.execute(f'''SELECT name, record  FROM records WHERE id = {id}''').fetchall()
     update.message.reply_text(f"Вы пометили эту запись:\n"
                               f"{record[0][0]} : {record[0][1]}\n"
-                              f" Как сделаную")
+                              f" Как сделаную", reply_markup=markup)
     return ConversationHandler.END
 
 
+#
 def stop_complete(update, context):
     update.message.reply_text('Вы прикратили помечание', reply_markup=markup)
+    return ConversationHandler.END
+
+
+#
+def view(update, context):
+    update.message.reply_text(
+        "Вы можете прервать поиск, послав команду /stop_add.\n"
+        "Вы можете посмотреть все задания или в определённой категории , "
+        "или посмотреть запись с определёным названием. \n"
+        "Для этого выберите нужный вам способ в клавиатуре",
+        reply_markup=markup4)
+    return 1
+
+
+def choosing_method_v(update, context):
+    method = update.message.text
+    update.message.reply_text(
+        f"Вы выбрали - {method}", reply_markup=markup3)
+    if method == "По названию":
+        return 2
+    elif method == "По категории":
+        return 3
+    else:
+        return 4
+
+
+def by_name_v(update, context):
+    update.message.reply_text(
+        f"Напишите название записи которую хотите посмотреть", reply_markup=ReplyKeyboardRemove())
+    return 5
+
+
+def end_view_name(update, context):
+    try:
+        name = update.message.text
+        user_id = update.message.from_user['id']
+        name = cur.execute(
+            f'''SELECT id, name, record FROM records 
+            WHERE "{name}" IN name AND user_id = {user_id} AND complete = 1''').fetchall()
+        names = ""
+        for el in name:
+            names = names + str(el[0]) + "- " + el[1] + ": " + el[2] + "\n"
+        update.message.reply_text(
+            f"Вот все записи с таким  коротким названием\n"
+            f"{names}", reply_markup=markup)
+        return ConversationHandler.END
+    except:
+        update.message.reply_text(
+            f"Записи с таким названием нет")
+        return 3
+
+
+def by_category_v(update, context):
+    category = cur.execute(f'''SELECT id, category FROM categorys''').fetchall()
+    categorys = ""
+    for el in category:
+        categorys = categorys + str(el[0]) + ": " + el[1] + "\n"
+    update.message.reply_text(f"Вот все существующие категории\n"
+                              f"{categorys}"
+                              f"Напишите ту категорию , которую хотите посмотреть",
+                              reply_markup=ReplyKeyboardRemove())
+    return 6
+
+
+def end_view_category(update, context):
+    try:
+        category = update.message.text
+        user_id = update.message.from_user['id']
+        category = cur.execute(
+            f'''SELECT id, name, record FROM records 
+            WHERE category = "{category}" AND user_id={user_id} AND complete = 1''').fetchall()
+        if len(category) == 0:
+            update.message.reply_text(
+                f"Записи с такой категорией  нет", reply_markup=markup)
+        else:
+            categorys = ""
+            for el in category:
+                categorys = categorys + str(el[0]) + "- " + el[1] + ": " + el[2] + "\n"
+            update.message.reply_text(f"Вот все записи с такой категорией"
+                                      f"{categorys}", reply_markup=markup)
+        return ConversationHandler.END
+
+    except:
+        update.message.reply_text(f"Такой категории нет")
+        return 4
+
+
+def end_view_all(update, context):
+    try:
+        user_id = update.message.from_user['id']
+        _all = cur.execute(
+            f'''SELECT id, name, record FROM records WHERE user_id={user_id} AND complete = 1''').fetchall()
+        categorys = ""
+        for el in _all:
+            categorys = categorys + str(el[0]) + "- " + el[1] + ": " + el[2] + "\n"
+        update.message.reply_text(
+            f"Вот все записи\n"
+            f"{categorys}", reply_markup=markup)
+        return ConversationHandler.END
+    except:
+        pass
+
+
+def stop_view(update, context):
+    update.message.reply_text('Вы прикратили поиск', reply_markup=markup)
     return ConversationHandler.END
 
 
@@ -248,13 +366,11 @@ def main():
     add_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('add', add)],
         states={
-            # Добавили user_data для сохранения ответа.
             1: [MessageHandler(Filters.text & ~Filters.command, selecting_category, pass_user_data=True)],
-            # ...и для его использования.
             2: [MessageHandler(Filters.text & ~Filters.command, selecting_category_2, pass_user_data=True)],
             3: [MessageHandler(Filters.text & ~Filters.command, new_category, pass_user_data=True)],
             4: [MessageHandler(Filters.text & ~Filters.command, old_category, pass_user_data=True)],
-            5: [MessageHandler(Filters.text & ~Filters.command, new_category, pass_user_data=True)],
+            5: [MessageHandler(Filters.text & ~Filters.command, new_category_2, pass_user_data=True)],
             6: [MessageHandler(Filters.text & ~Filters.command, short_name, pass_user_data=True)],
             7: [MessageHandler(Filters.text & ~Filters.command, end_add, pass_user_data=True)],
             8: [MessageHandler(Filters.text & ~Filters.command, old_category_2, pass_user_data=True)]
@@ -267,7 +383,6 @@ def main():
     delete_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('complete', complete)],
         states={
-            # Добавили user_data для сохранения ответа.
             1: [MessageHandler(Filters.text & ~Filters.command, choosing_method, pass_user_data=True)],
             2: [MessageHandler(Filters.text & ~Filters.command, choosing_method_2, pass_user_data=True)],
             3: [MessageHandler(Filters.text & ~Filters.command, by_name, pass_user_data=True)],
@@ -278,8 +393,21 @@ def main():
         },
         fallbacks=[CommandHandler('stop_complete', stop_complete)]
     )
-
     dp.add_handler(delete_conv_handler)
+    # Диалог помечания как выполненого
+    view_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('view', view)],
+        states={
+            1: [MessageHandler(Filters.text & ~Filters.command, choosing_method_v, pass_user_data=True)],
+            2: [MessageHandler(Filters.text & ~Filters.command, by_name_v, pass_user_data=True)],
+            3: [MessageHandler(Filters.text & ~Filters.command, by_category_v, pass_user_data=True)],
+            4: [MessageHandler(Filters.text & ~Filters.command, end_view_all, pass_user_data=True)],
+            5: [MessageHandler(Filters.text & ~Filters.command, end_view_name, pass_user_data=True)],
+            6: [MessageHandler(Filters.text & ~Filters.command, end_view_category, pass_user_data=True)]
+        },
+        fallbacks=[CommandHandler('stop_view', stop_view)]
+    )
+    dp.add_handler(view_conv_handler)
     updater.start_polling()
     updater.idle()
 
