@@ -6,12 +6,11 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, MessageHandler, Filters, ConversationHandler
 from telegram.ext import CallbackContext, CommandHandler
 
-TOKEN = "5357056348:AAHKBN4Va0NVAmGAxkeShO3oQZDpIVBeenI"
-'''logging.basicConfig(
+logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
 
-logger = logging.getLogger(__name__)'''
+logger = logging.getLogger(__name__)
 # Добавление всех клавиатур
 reply_keyboard = [['/add', '/complete'],
                   ['/site', '/work_time']]
