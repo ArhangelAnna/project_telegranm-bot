@@ -4,7 +4,6 @@ from telegram.ext import Updater, MessageHandler, Filters, ConversationHandler
 from telegram.ext import CommandHandler
 
 
-
 # Добавление всех клавиатур
 reply_keyboard = [['/add', '/complete', '/view']]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
@@ -26,8 +25,11 @@ cur = con.cursor()
 def start(update, context):
     try:
         update.message.reply_text(
-            f'''ghjfgghh
-            hjjkiijjjikkkkk''',
+            f'Здравствуйте этот Бот поможет вам немного упорядочить ваши задач\n'
+            f'У него всего три команды :'
+            f'/add - Добавленние'
+            f'/complete - Пометкак как сделаного'
+            f'/view - Просмотр не сделаных задач',
             reply_markup=markup)  # (приветственное сообщение,добавление основной кллавиатуры)
         # Получение user_id и user_name
         user_id = update.message.from_user['id']
@@ -312,7 +314,7 @@ def end_view_category(update, context):
         update.message.reply_text(f"Такой категории нет")
 
 
-# Конец просмотра, просмотр всех 
+# Конец просмотра, просмотр всех
 def end_view_all(update, context):
     try:
         user_id = update.message.from_user['id']
