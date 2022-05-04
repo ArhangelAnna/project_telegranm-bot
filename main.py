@@ -155,11 +155,18 @@ def stop_add(update, context):
 
 # Начало помечания(предупреждение, удаление старой клавиатуры)
 def complete(update, context):
-    update.message.reply_text(
-        f"!ВЫ ТОЧНО ХОТИТЕ ПОМЕТЬ ЗАПИСЬ КАК ВЫПОЛНЕНУЮ! "
-        f"Если  вы не хотите помечать пошлите команду /stop_complete.\n"
-        f"А если хотите продолжить нажмите далее", reply_markup=markup3)
-    return 1
+    user_id = update.message.from_user['id']
+    _id = list(cur.execute(f'''SELECT id FROM records WHERE user_id = {user_id} AND complete = 1''').fetchall())
+    if len(_id) == 0:
+        update.message.reply_text(
+            "У вас нет не сделанных записей , перед тем как помечать добавте записи", reply_markup=markup)
+        return ConversationHandler.END
+    else:
+        update.message.reply_text(
+            f"!ВЫ ТОЧНО ХОТИТЕ ПОМЕТЬ ЗАПИСЬ КАК ВЫПОЛНЕНУЮ! "
+            f"Если  вы не хотите помечать пошлите команду /stop_complete.\n"
+            f"А если хотите продолжить нажмите далее", reply_markup=markup3)
+        return 1
 
 
 # 2 стания помечания , 1\2 стадия выбора метода поиска(добавления новой клавиатуры)
@@ -185,7 +192,7 @@ def choosing_method_2(update, context):
 # 3 стадия  помечания , поиск по названию(пользователь вводит название)
 def by_name(update, context):
     user_id = update.message.from_user['id']
-    name = cur.execute(f'''SELECT id, name FROM records WHERE user_id = {user_id}''').fetchall()
+    name = cur.execute(f'''SELECT id, name FROM ercords WHERE user_id = {user_id} ''').fetchall()
     names = ""
     for el in name:
         names = names + str(el[0]) + "- " + el[1] + "\n"
@@ -258,13 +265,20 @@ def stop_complete(update, context):
 
 # Начало просмотра
 def view(update, context):
-    update.message.reply_text(
-        "Вы можете прервать поиск, послав команду /stop_view.\n"
-        "Вы можете посмотреть все задания или в определённой категории , "
-        "или посмотреть запись с определёным названием. \n"
-        "Для этого выберите нужный вам способ в клавиатуре",
-        reply_markup=markup4)
-    return 1
+    user_id = update.message.from_user['id']
+    _id = list(cur.execute(f'''SELECT id FROM records WHERE user_id = {user_id} AND complete = 1 ''').fetchall())
+    if len(_id) == 0:
+        update.message.reply_text(
+            "У вас нет не сделанных записей , перед тем как их смотреть добавте записи", reply_markup=markup)
+        return ConversationHandler.END
+    else:
+        update.message.reply_text(
+            "Вы можете прервать поиск, послав команду /stop_view.\n"
+            "Вы можете посмотреть все задания или в определённой категории , "
+            "или посмотреть запись с определёным названием. \n"
+            "Для этого выберите нужный вам способ в клавиатуре",
+            reply_markup=markup4)
+        return 1
 
 
 # 2 стадия просмотра , выбор метода по которому отбираться задачи
